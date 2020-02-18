@@ -4,16 +4,20 @@ import "./App.css";
 import PixiFps from "pixi-fps";
 import React from "react";
 
+export const useForceUpdate = () => {
+  const [, setDummyState] = React.useState<{}>(Object.create(null));
+  const forceUpdate = React.useCallback(
+    () => setDummyState(Object.create(null)),
+    []
+  );
+  return forceUpdate;
+};
+
 class PixiSceneViewer extends React.Component<{}, {}> {
   element: React.RefObject<HTMLDivElement>;
   constructor(props: {}) {
     super(props);
     this.element = React.createRef();
-    this.data = null;
-    this.alpha = 0.5;
-    this.dragging = false;
-    this.x = 0;
-    this.y = 0;
   }
 
   componentDidMount() {
@@ -29,16 +33,16 @@ class PixiSceneViewer extends React.Component<{}, {}> {
       });
       document.body.appendChild(app.view);
 
-      const container1 = new PIXI.Container();
-      //const container2 = new PIXI.Container();
+      //const container1 = new PIXI.Container();
+      const container2 = new PIXI.Container();
 
-      app.stage.addChild(container1);
-      //app.stage.addChild(container2);
+      //app.stage.addChild(container1);
+      app.stage.addChild(container2);
       app.stage.addChild(fpsCounter);
-      this.parent = app.stage;
       // Create a new texture
-      this.renderContainer(container1, app, 0);
-      //this.renderContainer(container2, app, 1);
+      //this.renderContainer(container1, app, 0);
+
+      this.renderContainer(container2, app, 0);
 
       // Listen for animate update
       app.ticker.add(delta => {
@@ -55,42 +59,26 @@ class PixiSceneViewer extends React.Component<{}, {}> {
     app: PIXI.Application,
     offset: number
   ) {
-    const texture = PIXI.Texture.from("./bunny.png");
-    // for (let i = 0; i < 100000; i++) {
-    //   const bunny = new PIXI.Sprite(texture);
-    //   bunny.anchor.set(0.5);
-    //   bunny.x = (i % 5) * 40;
-    //   bunny.y = Math.floor(i / 5) * 40;
-    //   container.addChild(bunny);
-    // }
-    container.x = app.screen.width / 2; //4 + (offset * (app.screen.width + 10)) / 2;
+    container.x = app.screen.width / 2;
     container.y = app.screen.height / 2;
+    container.width = app.screen.width / 2;
+    container.height = app.screen.height / 2;
+    console.time("Initialize scene");
 
-    // for (let i = 0; i < 100; i++) {
-    //   const graphics = new PIXI.Graphics();
-    //   const x = Math.random();
-    //   const y = Math.random();
-
-    //   graphics.beginFill(0xffff00);
-
-    //   // set the line style to have a width of 5 and set the color to red
-    //   graphics.lineStyle(2, 0xff0000);
-
-    //   // draw a rectangle
-    //   graphics.drawRect(x * 400 - 25, y * 400 - 25, 100, 100);
-    //   //graphics.cacheAsBitmap = true;
-    //   container.addChild(graphics);
-    // }
-
-    for (let i = 0; i < 10; i++) {
-      container.addChild(
-        this.createBunny(
-          Math.floor(Math.random() * app.screen.width),
-          Math.floor(Math.random() * app.screen.height),
-          texture
-        )
+    for (let i = 0; i < 100000; i++) {
+      const rectangle = new PIXI.Graphics();
+      rectangle.x = 0;
+      rectangle.y = 0;
+      this.createRectangle(
+        Math.floor(Math.random() * 1600),
+        Math.floor(Math.random() * 800),
+        rectangle,
+        container
       );
+      container.addChild(rectangle);
     }
+
+    console.timeEnd("Initialize scene");
 
     // Move container to the center
 
@@ -99,67 +87,58 @@ class PixiSceneViewer extends React.Component<{}, {}> {
     container.pivot.y = container.height / 2;
   }
 
-  createBunny(x: number, y: number, texture: PIXI.Texture) {
-    // create our little bunny friend..
-    const bunny = new PIXI.Sprite(texture);
+  createRectangle(
+    x: number,
+    y: number,
+    rectangle: PIXI.Graphics,
+    parent: PIXI.Container
+  ) {
+    const color = 0xffffff * Math.random();
+    //rectangle.lineStyle(1, color, 1);
+    rectangle.beginFill(color, 0.7);
+    rectangle.drawRect(0, 0, 40 * Math.random(), 40 * Math.random());
+    //rectangle.drawRect(0, 0, 40, 40);
+    rectangle.endFill();
 
-    // enable the bunny to be interactive... this will allow it to respond to mouse and touch events
-    bunny.interactive = true;
+    rectangle.interactive = true;
+    rectangle.buttonMode = true;
+    //bunny.anchor.set(0.5);
+    rectangle.scale.set(3);
+    let data: any = null;
+    let alpha: number = 0.5;
+    let dragging: boolean = false;
 
-    // this button mode will mean the hand cursor appears when you roll over the bunny with your mouse
-    bunny.buttonMode = true;
+    const onDragStart = (event: any) => {
+      data = event.data;
+      alpha = 0.5;
+      dragging = true;
+    };
 
-    // center the bunny's anchor point
-    bunny.anchor.set(0.5);
+    const onDragEnd = () => {
+      rectangle.alpha = 1;
+      dragging = false;
+      data = null;
+    };
 
-    // make it a bit bigger, so it's easier to grab
-    bunny.scale.set(3);
-
+    const onDragMove = () => {
+      if (dragging) {
+        const newPosition = data.getLocalPosition(parent);
+        rectangle.x = newPosition.x;
+        rectangle.y = newPosition.y;
+      }
+    };
     // setup events for mouse + touch using
     // the pointer events
-    bunny
-      .on("pointerdown", this.onDragStart)
-      .on("pointerup", this.onDragEnd)
-      .on("pointerupoutside", this.onDragEnd)
-      .on("pointermove", this.onDragMove);
+    rectangle
+      .on("pointerdown", onDragStart)
+      .on("pointerup", onDragEnd)
+      .on("pointerupoutside", onDragEnd)
+      .on("pointermove", onDragMove);
 
-    bunny.x = x;
-    bunny.y = y;
-    return bunny;
+    rectangle.x = x;
+    rectangle.y = y;
+    return rectangle;
   }
-
-  data: any;
-  alpha: number;
-  dragging: boolean;
-  parent: any;
-  x: number;
-  y: number;
-
-  onDragStart = (event: any) => {
-    // store a reference to the data
-    // the reason for this is because of multitouch
-    // we want to track the movement of this particular touch
-    console.log("setting data", event);
-
-    this.data = event.data;
-    this.alpha = 0.5;
-    this.dragging = true;
-  };
-
-  onDragEnd = () => {
-    this.alpha = 1;
-    this.dragging = false;
-    // set the interaction data to null
-    this.data = null;
-  };
-
-  onDragMove = () => {
-    if (this.dragging) {
-      const newPosition = this.data.getLocalPosition(this.parent);
-      this.x = newPosition.x;
-      this.y = newPosition.y;
-    }
-  };
 
   shouldComponentUpdate() {
     return true;
