@@ -4,14 +4,8 @@ import "./App.css";
 import PixiFps from "pixi-fps";
 import React from "react";
 
-export const useForceUpdate = () => {
-  const [, setDummyState] = React.useState<{}>(Object.create(null));
-  const forceUpdate = React.useCallback(
-    () => setDummyState(Object.create(null)),
-    []
-  );
-  return forceUpdate;
-};
+const addCiapkiMethod: "adChild" | "seperate" | "none" = "none";
+const rectCount = 100000;
 
 class PixiSceneViewer extends React.Component<{}, {}> {
   element: React.RefObject<HTMLDivElement>;
@@ -29,7 +23,8 @@ class PixiSceneViewer extends React.Component<{}, {}> {
         width: 1600,
         height: 800,
         //backgroundColor: 0x1099bb,
-        resolution: window.devicePixelRatio || 1
+        resolution: window.devicePixelRatio || 1,
+        transparent: true
       });
       document.body.appendChild(app.view);
 
@@ -64,18 +59,29 @@ class PixiSceneViewer extends React.Component<{}, {}> {
     container.width = app.screen.width / 2;
     container.height = app.screen.height / 2;
     console.time("Initialize scene");
+    const texture = PIXI.Texture.from("circle.png");
 
-    for (let i = 0; i < 100000; i++) {
-      const rectangle = new PIXI.Graphics();
-      rectangle.x = 0;
-      rectangle.y = 0;
-      this.createRectangle(
-        Math.floor(Math.random() * 1600),
-        Math.floor(Math.random() * 800),
-        rectangle,
-        container
-      );
-      container.addChild(rectangle);
+    const rects = Array(rectCount)
+      .fill(null)
+      .map(() => this.createRectangle(texture, container));
+
+    container.addChild(...rects);
+
+    if (addCiapkiMethod === "seperate") {
+      const sprites = rects.map(rect => {
+        return [
+          this.createDragSprite(rect.x, rect.y, texture),
+          this.createDragSprite(rect.x + rect.width, rect.y, texture),
+          this.createDragSprite(
+            rect.x + rect.width,
+            rect.y + rect.height,
+            texture
+          ),
+          this.createDragSprite(rect.x, rect.y + rect.height, texture)
+        ];
+      });
+
+      sprites.forEach(x => container.addChild(...x));
     }
 
     console.timeEnd("Initialize scene");
@@ -87,23 +93,56 @@ class PixiSceneViewer extends React.Component<{}, {}> {
     container.pivot.y = container.height / 2;
   }
 
-  createRectangle(
-    x: number,
-    y: number,
-    rectangle: PIXI.Graphics,
-    parent: PIXI.Container
-  ) {
+  createDragSprite(x: number, y: number, texture: PIXI.Texture) {
+    const circle = new PIXI.Sprite(texture);
+    circle.anchor.set(0.5);
+    circle.scale.x = 0.5;
+    circle.scale.y = 0.5;
+    circle.x = x;
+    circle.y = y;
+    return circle;
+  }
+
+  createRectangle(texture: PIXI.Texture, parent: PIXI.Container) {
+    const x = Math.floor(Math.random() * 1600);
+    const y = Math.floor(Math.random() * 800);
+    const rectangle = new PIXI.Graphics();
+    rectangle.x = 0;
+    rectangle.y = 0;
     const color = 0xffffff * Math.random();
     //rectangle.lineStyle(1, color, 1);
     rectangle.beginFill(color, 0.7);
-    rectangle.drawRect(0, 0, 40 * Math.random(), 40 * Math.random());
-    //rectangle.drawRect(0, 0, 40, 40);
+    const width = 100 * Math.random() + 20;
+    const height = 100 * Math.random() + 20;
+    rectangle.drawRect(0, 0, width, height);
     rectangle.endFill();
-
     rectangle.interactive = true;
     rectangle.buttonMode = true;
-    //bunny.anchor.set(0.5);
-    rectangle.scale.set(3);
+    rectangle.scale.set(1);
+
+    if (addCiapkiMethod === "adChild") {
+      const sprites = [
+        this.createDragSprite(rectangle.x, rectangle.y, texture),
+        this.createDragSprite(
+          rectangle.x + rectangle.width,
+          rectangle.y,
+          texture
+        ),
+        this.createDragSprite(
+          rectangle.x + rectangle.width,
+          rectangle.y + rectangle.height,
+          texture
+        ),
+        this.createDragSprite(
+          rectangle.x,
+          rectangle.y + rectangle.height,
+          texture
+        )
+      ];
+
+      rectangle.addChild(...sprites);
+    }
+
     let data: any = null;
     let alpha: number = 0.5;
     let dragging: boolean = false;
