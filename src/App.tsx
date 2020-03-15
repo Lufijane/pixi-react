@@ -5,7 +5,7 @@ import PixiFps from "pixi-fps";
 import React from "react";
 
 const addCiapkiMethod: "adChild" | "seperate" | "none" = "none";
-const rectCount = 100000;
+const rectCount = 1000;
 
 class PixiSceneViewer extends React.Component<{}, {}> {
   element: React.RefObject<HTMLDivElement>;
@@ -20,11 +20,12 @@ class PixiSceneViewer extends React.Component<{}, {}> {
     if (this.element.current !== null) {
       const fpsCounter = new PixiFps();
       const app = new PIXI.Application({
-        width: 1600,
-        height: 800,
+        width: 600,
+        height: 600,
         //backgroundColor: 0x1099bb,
-        resolution: window.devicePixelRatio || 1,
-        transparent: true
+        //resolution: window.devicePixelRatio || 1,
+        transparent: true,
+        antialias: true
       });
       document.body.appendChild(app.view);
 
@@ -44,7 +45,7 @@ class PixiSceneViewer extends React.Component<{}, {}> {
         // rotate the container!
         // use delta to create frame-independent transform
         //container1.rotation -= 0.01 * delta;
-        //container2.rotation -= 0.01 * delta;
+        container2.rotation -= 0.01 * delta;
       });
     }
   }
@@ -104,20 +105,23 @@ class PixiSceneViewer extends React.Component<{}, {}> {
   }
 
   createRectangle(texture: PIXI.Texture, parent: PIXI.Container) {
-    const x = Math.floor(Math.random() * 1600);
-    const y = Math.floor(Math.random() * 800);
+    const x = Math.floor(Math.random() * 600);
+    const y = Math.floor(Math.random() * 600);
     const rectangle = new PIXI.Graphics();
+
     rectangle.x = 0;
     rectangle.y = 0;
     const color = 0xffffff * Math.random();
+    rectangle.lineStyle(10, color, 1);
     //rectangle.lineStyle(1, color, 1);
-    rectangle.beginFill(color, 0.7);
+    //rectangle.beginFill(color, 0.7);
     const width = 100 * Math.random() + 20;
     const height = 100 * Math.random() + 20;
     rectangle.drawRect(0, 0, width, height);
-    rectangle.endFill();
+    //rectangle.endFill();
     rectangle.interactive = true;
     rectangle.buttonMode = true;
+    rectangle.rotation = Math.random();
     rectangle.scale.set(1);
 
     if (addCiapkiMethod === "adChild") {
